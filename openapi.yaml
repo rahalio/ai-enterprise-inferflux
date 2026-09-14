@@ -1,0 +1,588 @@
+openapi: 3.0.3
+info:
+  title: Inferflux
+  version: 0.1.0
+  description: >-
+    Streaming feature and event ML runtime governing embed vs RPC deployments,
+    hybrid topologies, shadow experiments, and accuracy SLOs on the event bus.
+  x-product-slug: ai-enterprise-inferflux
+  x-source: ai-in-enterprise/Using Apache Kafka to Drive Cutting-Edge Machine Learning _ Confluent/
+servers:
+  - url: https://api.example.com
+tags:
+  - name: FeatureStreams
+  - name: Models
+  - name: Deployments
+  - name: Experiments
+  - name: Monitoring
+  - name: Topologies
+paths:
+  /v1/feature-streams:
+    get:
+      operationId: listFeatureStreams
+      tags: [FeatureStreams]
+      security: [{ BearerAuth: [] }, { ApiKeyAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Feature streams page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListEnvelopeFeatureStream" }
+    post:
+      operationId: createFeatureStream
+      tags: [FeatureStreams]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FeatureStreamCreate" }
+      responses:
+        "201":
+          description: Feature stream created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeFeatureStream" }
+  /v1/feature-streams/{featureStreamId}/transforms:
+    parameters:
+      - name: featureStreamId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      operationId: publishTransformVersion
+      tags: [FeatureStreams]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TransformVersion" }
+      responses:
+        "201":
+          description: Transform version published
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeTransformVersion" }
+  /v1/models:
+    get:
+      operationId: listModelArtifacts
+      tags: [Models]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Model artifacts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListEnvelopeModelArtifact" }
+    post:
+      operationId: registerModelArtifact
+      tags: [Models]
+      security: [{ BearerAuth: [] }, { ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModelArtifact" }
+      responses:
+        "201":
+          description: Artifact registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeModelArtifact" }
+  /v1/deployments:
+    get:
+      operationId: listDeployments
+      tags: [Deployments]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: mode
+          in: query
+          schema:
+            type: string
+            enum: [embedded, rpc]
+      responses:
+        "200":
+          description: Deployments page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListEnvelopeDeployment" }
+    post:
+      operationId: createDeployment
+      tags: [Deployments]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeploymentCreate" }
+      responses:
+        "201":
+          description: Deployment created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeDeployment" }
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/deployments/{deploymentId}/promote:
+    parameters:
+      - name: deploymentId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      operationId: promoteDeployment
+      tags: [Deployments]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetState]
+              properties:
+                targetState:
+                  type: string
+                  enum: [shadow, live, rolled_back]
+      responses:
+        "200":
+          description: Deployment state updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeDeployment" }
+  /v1/experiments:
+    post:
+      operationId: createShadowExperiment
+      tags: [Experiments]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShadowExperiment" }
+      responses:
+        "201":
+          description: Experiment created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeShadowExperiment" }
+  /v1/experiments/{experimentId}:
+    parameters:
+      - name: experimentId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getShadowExperiment
+      tags: [Experiments]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Experiment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeShadowExperiment" }
+  /v1/monitoring/slos:
+    get:
+      operationId: listLatencySlos
+      tags: [Monitoring]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Latency SLOs
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListEnvelopeLatencySLO" }
+    post:
+      operationId: defineLatencySlo
+      tags: [Monitoring]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LatencySLO" }
+      responses:
+        "201":
+          description: SLO defined
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeLatencySLO" }
+  /v1/monitoring/accuracy:
+    get:
+      operationId: listAccuracyMetrics
+      tags: [Monitoring]
+      security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }]
+      parameters:
+        - name: deploymentId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Accuracy metrics
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListEnvelopeAccuracyMetric" }
+  /v1/topologies/hybrid-links:
+    get:
+      operationId: listHybridLinks
+      tags: [Topologies]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Hybrid train/infer links
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListEnvelopeHybridLink" }
+    post:
+      operationId: createHybridLink
+      tags: [Topologies]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HybridLink" }
+      responses:
+        "201":
+          description: Hybrid link created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataEnvelopeHybridLink" }
+components:
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    UnprocessableEntity:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    ResponseMeta:
+      type: object
+      required: [requestId, timestamp]
+      properties:
+        requestId: { type: string }
+        timestamp: { type: string, format: date-time }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+
+    FeatureStream:
+      type: object
+      required: [id, name, sourceTopic]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        sourceTopic: { type: string }
+        outputTopic: { type: string }
+        currentTransformVersion: { type: string }
+    FeatureStreamCreate:
+      type: object
+      required: [name, sourceTopic]
+      properties:
+        name: { type: string }
+        sourceTopic: { type: string }
+        outputTopic: { type: string }
+    TransformVersion:
+      type: object
+      required: [expression]
+      properties:
+        id: { type: string }
+        featureStreamId: { type: string }
+        expression: { type: string }
+        expressionType:
+          type: string
+          enum: [ksql, streams_dsl]
+        version: { type: integer }
+    ModelArtifact:
+      type: object
+      required: [name, framework, artifactUri]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        framework:
+          type: string
+          enum: [tensorflow, h2o, deeplearning4j, sklearn, automl_export, other]
+        artifactUri: { type: string }
+        automlOrigin: { type: boolean }
+        version: { type: string }
+    Deployment:
+      type: object
+      required: [id, featureStreamId, modelArtifactId, mode, state]
+      properties:
+        id: { type: string }
+        featureStreamId: { type: string }
+        modelArtifactId: { type: string }
+        mode:
+          type: string
+          enum: [embedded, rpc]
+        state:
+          type: string
+          enum: [draft, shadow, live, rolled_back]
+        tradeoffRecord: { type: string }
+        rpcEndpoint: { type: string }
+        locality:
+          type: string
+          enum: [cloud, on_prem, edge]
+        exactlyOnceCompatible: { type: boolean }
+    DeploymentCreate:
+      type: object
+      required: [featureStreamId, modelArtifactId, mode, tradeoffRecord]
+      properties:
+        featureStreamId: { type: string }
+        modelArtifactId: { type: string }
+        mode:
+          type: string
+          enum: [embedded, rpc]
+        tradeoffRecord: { type: string }
+        rpcEndpoint: { type: string }
+        locality:
+          type: string
+          enum: [cloud, on_prem, edge]
+    ShadowExperiment:
+      type: object
+      required: [championDeploymentId, challengerDeploymentId]
+      properties:
+        id: { type: string }
+        championDeploymentId: { type: string }
+        challengerDeploymentId: { type: string }
+        status:
+          type: string
+          enum: [running, completed, aborted]
+        accuracyDelta: { type: number, format: float }
+    LatencySLO:
+      type: object
+      required: [deploymentId, p99Ms]
+      properties:
+        id: { type: string }
+        deploymentId: { type: string }
+        p99Ms: { type: number }
+        errorBudgetPct: { type: number, format: float }
+    AccuracyMetric:
+      type: object
+      required: [deploymentId, metricName, value]
+      properties:
+        deploymentId: { type: string }
+        metricName: { type: string }
+        value: { type: number, format: float }
+        capturedAt: { type: string, format: date-time }
+    HybridLink:
+      type: object
+      required: [trainLocality, inferLocality]
+      properties:
+        id: { type: string }
+        trainLocality:
+          type: string
+          enum: [cloud, on_prem]
+        inferLocality:
+          type: string
+          enum: [cloud, on_prem, edge]
+        replicationEnabled: { type: boolean }
+        sourceCluster: { type: string }
+        targetCluster: { type: string }
+
+    DataEnvelopeFeatureStream:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: "#/components/schemas/FeatureStream" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    ListEnvelopeFeatureStream:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FeatureStream" }
+            nextCursor: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+
+    DataEnvelopeTransformVersion:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: "#/components/schemas/TransformVersion" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    ListEnvelopeTransformVersion:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/TransformVersion" }
+            nextCursor: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+
+    DataEnvelopeModelArtifact:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: "#/components/schemas/ModelArtifact" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    ListEnvelopeModelArtifact:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ModelArtifact" }
+            nextCursor: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+
+    DataEnvelopeDeployment:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: "#/components/schemas/Deployment" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    ListEnvelopeDeployment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Deployment" }
+            nextCursor: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+
+    DataEnvelopeShadowExperiment:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: "#/components/schemas/ShadowExperiment" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    ListEnvelopeShadowExperiment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ShadowExperiment" }
+            nextCursor: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+
+    DataEnvelopeLatencySLO:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: "#/components/schemas/LatencySLO" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    ListEnvelopeLatencySLO:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/LatencySLO" }
+            nextCursor: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+
+    DataEnvelopeAccuracyMetric:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: "#/components/schemas/AccuracyMetric" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    ListEnvelopeAccuracyMetric:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AccuracyMetric" }
+            nextCursor: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+
+    DataEnvelopeHybridLink:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: "#/components/schemas/HybridLink" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    ListEnvelopeHybridLink:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/HybridLink" }
+            nextCursor: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
